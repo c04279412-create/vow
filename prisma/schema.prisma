@@ -1,0 +1,188 @@
+// Prisma Schema for VowCrafts E-Commerce Platform
+// Supports PostgreSQL & relational database deployments
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ProductType {
+  TYPE_A // Simple standard checkout
+  TYPE_B // Custom Text (Bride/Groom Name, Date, Instructions)
+  TYPE_C // Custom Images (1 to 50+ uploads)
+}
+
+enum PaymentStatus {
+  pending_verification
+  advance_verified
+  fully_paid
+  rejected
+}
+
+enum OrderStatus {
+  new
+  processing
+  in_production
+  ready_to_ship
+  shipped
+  delivered
+  cancelled
+}
+
+enum AdminRole {
+  super_admin
+  store_manager
+  order_processor
+  support
+}
+
+model StoreSetting {
+  id                        String   @id @default(uuid())
+  storeName                 String   @default("VowCrafts | Bespoke Wedding Frames")
+  storeLogo                 String   @default("/logo.svg")
+  tagline                   String   @default("Preserving Eternal Love In Handcrafted Elegance")
+  whatsappNumber            String   @default("+923001234567")
+  announcementTickerText    String   @default("✨ Free express delivery on orders over PKR 3,000 | Contact WhatsApp for bespoke commissions")
+  advancePaymentPercentage  Float    @default(30.0)
+  currency                  String   @default("PKR")
+  currencySymbol            String   @default("Rs.")
+  freeShippingThreshold     Float    @default(3000.0)
+  standardShippingFee       Float    @default(250.0)
+  bankDetails               Json?
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
+}
+
+model Category {
+  id            String        @id @default(uuid())
+  name          String
+  slug          String        @unique
+  description   String?
+  imageUrl      String?
+  displayOrder  Int           @default(0)
+  isActive      Boolean       @default(true)
+  subcategories Subcategory[]
+  products      Product[]
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+}
+
+model Subcategory {
+  id          String   @id @default(uuid())
+  name        String
+  slug        String
+  description String?
+  categoryId  String
+  category    Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Product {
+  id                 String       @id @default(uuid())
+  name               String
+  slug               String       @unique
+  description        String
+  basePrice          Float
+  salePrice          Float?
+  productType        ProductType  @default(TYPE_A)
+  customFields       Json?        // Dynamic fields definition for Type B
+  imageUploadConfig  Json?        // Image upload limits for Type C
+  images             String[]
+  sizes              Json?        // Available size options + price delta
+  frameColors        Json?        // Color hex codes + price delta
+  stock              Int          @default(25)
+  simulatedViewers   Int          @default(14)
+  isBestSeller       Boolean      @default(false)
+  isNewArrival       Boolean      @default(false)
+  isTrending         Boolean      @default(false)
+  isActive           Boolean      @default(true)
+  categoryId         String
+  category           Category     @relation(fields: [categoryId], references: [id])
+  subcategory        String?
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+}
+
+model Order {
+  id                   String        @id @default(uuid())
+  orderNumber          String        @unique
+  customerFullName     String
+  customerPhone        String
+  customerEmail        String?
+  customerAddress      String
+  customerCity         String
+  customerProvince     String        @default("Punjab")
+  customerPostalCode   String?
+  customerNotes        String?
+  items                Json          // Product info, selected attributes, custom text, photo URLs
+  subtotal             Float
+  discount             Float         @default(0)
+  shippingFee          Float         @default(0)
+  totalAmount          Float
+  advancePercentage    Float         @default(30)
+  advanceAmount        Float
+  remainingBalance     Float
+  paymentMethod        String        @default("bank_transfer")
+  paymentScreenshotUrl String        // Mandatory customer payment receipt proof
+  paymentStatus        PaymentStatus @default(pending_verification)
+  verifiedAt           DateTime?
+  verifiedBy           String?
+  orderStatus          OrderStatus   @default(new)
+  timeline             Json?
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+}
+
+model Coupon {
+  id            String    @id @default(uuid())
+  code          String    @unique
+  discountType  String    @default("percentage")
+  discountValue Float
+  minOrderValue Float     @default(0)
+  active        Boolean   @default(true)
+  expiryDate    DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Banner {
+  id         String   @id @default(uuid())
+  title      String
+  subtitle   String?
+  buttonText String   @default("Shop Collection")
+  buttonLink String   @default("/categories/wedding-frames")
+  imageUrl   String
+  active     Boolean  @default(true)
+  order      Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model Review {
+  id           String   @id @default(uuid())
+  customerName String
+  productName  String
+  rating       Int      @default(5)
+  comment      String
+  verified     Boolean  @default(true)
+  approved     Boolean  @default(true)
+  reviewDate   DateTime @default(now())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model AdminUser {
+  id        String    @id @default(uuid())
+  name      String
+  email     String    @unique
+  role      AdminRole @default(super_admin)
+  active    Boolean   @default(true)
+  lastLogin DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
