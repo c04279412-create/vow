@@ -1,0 +1,26 @@
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+
+  # 1. Route /api/* requests to the PHP micro-router
+  RewriteRule ^api/(.*)$ api/index.php [QSA,L]
+
+  # 2. Direct access to existing static files, uploads, and assets
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+
+  # 3. Client-side routing for React/Next.js pages
+  RewriteRule ^ index.html [L]
+</IfModule>
+
+# Security: Deny direct access to data files
+<Files "store_state.json">
+  Order allow,deny
+  Deny from all
+</Files>
+
+# Performance: Enable GZIP compression
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css text/javascript application/javascript application/json
+</IfModule>
